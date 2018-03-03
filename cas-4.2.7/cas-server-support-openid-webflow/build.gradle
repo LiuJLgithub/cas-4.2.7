@@ -1,0 +1,8 @@
+
+description = 'Apereo CAS OpenID Webflow Support'
+dependencies {
+    compile project(':cas-server-core-webflow')
+    compile project(':cas-server-support-openid')
+}
+[ZoneTransfer]
+ZoneId=3

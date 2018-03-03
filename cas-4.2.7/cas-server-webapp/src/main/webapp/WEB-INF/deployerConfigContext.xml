@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:c="http://www.springframework.org/schema/c"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xmlns:sec="http://www.springframework.org/schema/security"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+       http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+       http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security.xsd
+       http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+    <util:map id="authenticationHandlersResolvers">
+        <entry key-ref="proxyAuthenticationHandler" value-ref="proxyPrincipalResolver" />
+        <entry key-ref="primaryAuthenticationHandler" value-ref="primaryPrincipalResolver" />
+    </util:map>
+
+    <util:list id="authenticationMetadataPopulators">
+        <ref bean="successfulHandlerMetaDataPopulator" />
+        <ref bean="rememberMeAuthenticationMetaDataPopulator" />
+    </util:list>
+	<!-- 这里配置用户属性 -->
+    <bean id="attributeRepository" class="org.jasig.services.persondir.support.NamedStubPersonAttributeDao"
+          p:backingMap-ref="attrRepoBackingMap" />
+
+	<!-- 原来的验证配置
+    <alias name="acceptUsersAuthenticationHandler" alias="primaryAuthenticationHandler" /> -->
+    
+    <!-- queryAndEncodeDatabaseAuthenticationHandler是指通过查询数据库并编码来校验用户名和密码
+    <alias name="queryAndEncodeDatabaseAuthenticationHandler" alias="primaryAuthenticationHandler" /> -->
+    
+    <!-- 使用queryDatabaseAuthenticationHandler作为primaryAuthenticationHandler -->
+    <bean id="queryDatabaseAuthenticationHandler" 
+    class="org.jasig.cas.adaptors.jdbc.QueryDatabaseAuthenticationHandler">
+    <property name="dataSource" ref="dataSource" />
+    <property name="sql" value="select password from cas_user where lower(userName) = lower(?)" />
+    <!-- 指定密码加密器（可选） 
+    <property name="passwordEncoder" ref="passwordEncoder" />-->
+	</bean>
+	<!-- 密码加密器（可以指定自己实现的加密器） -->
+	<bean id="passwordEncoder"
+	    class="org.jasig.cas.authentication.handler.DefaultPasswordEncoder" >
+	    <constructor-arg name="encodingAlgorithm" value="MD5"/>
+	    <property name="characterEncoding" value="UTF-8"/>
+	</bean>
+	
+    <alias name="queryDatabaseAuthenticationHandler" alias="primaryAuthenticationHandler" />
+    <alias name="personDirectoryPrincipalResolver" alias="primaryPrincipalResolver" />
+
+    <util:map id="attrRepoBackingMap">
+        <entry key="uid" value="uid" />
+        <entry key="eduPersonAffiliation" value="eduPersonAffiliation" />
+        <entry key="groupMembership" value="groupMembership" />
+        <entry>
+            <key><value>memberOf</value></key>
+            <list>
+                <value>faculty</value>
+                <value>staff</value>
+                <value>org</value>
+            </list>
+        </entry>
+    </util:map>
+
+    <alias name="serviceThemeResolver" alias="themeResolver" />
+
+    <alias name="jsonServiceRegistryDao" alias="serviceRegistryDao" />
+
+    <alias name="defaultTicketRegistry" alias="ticketRegistry" />
+    
+    <alias name="ticketGrantingTicketExpirationPolicy" alias="grantingTicketExpirationPolicy" />
+    <alias name="multiTimeUseOrTimeoutExpirationPolicy" alias="serviceTicketExpirationPolicy" />
+
+    <alias name="anyAuthenticationPolicy" alias="authenticationPolicy" />
+    <alias name="acceptAnyAuthenticationPolicyFactory" alias="authenticationPolicyFactory" />
+
+    <bean id="auditTrailManager"
+          class="org.jasig.inspektr.audit.support.Slf4jLoggingAuditTrailManager"
+          p:entrySeparator="${cas.audit.singleline.separator:|}"
+          p:useSingleLine="${cas.audit.singleline:false}"/>
+
+    <alias name="neverThrottle" alias="authenticationThrottle" />
+
+    <util:list id="monitorsList">
+        <ref bean="memoryMonitor" />
+        <ref bean="sessionMonitor" />
+    </util:list>
+
+    <alias name="defaultPrincipalFactory" alias="principalFactory" />
+    <alias name="defaultAuthenticationTransactionManager" alias="authenticationTransactionManager" />
+    <alias name="defaultPrincipalElectionStrategy" alias="principalElectionStrategy" />
+    <alias name="tgcCipherExecutor" alias="defaultCookieCipherExecutor" />
+    <!-- 数据库连接池druid -->
+	<bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource"
+		init-method="init" destroy-method="close">
+		<!-- 基本属性 driverClassName、url、username、password -->
+		<property name="driverClassName" value="${jdbc.driverClassName}"></property>
+		<property name="url" value="${jdbc.url}"></property>
+		<property name="username" value="${jdbc.username}"></property>
+		<property name="password" value="${jdbc.password}"></property>
+		<!-- 配置初始化大小、最小、最大 -->
+		<property name="initialSize" value="${druid.initialSize}"></property>
+		<property name="minIdle" value="${druid.minIdle}"></property>
+		<property name="maxActive" value="${druid.maxActive}"></property>
+		<!-- 配置获取连接等待超时的时间 -->
+		<property name="maxWait" value="${druid.maxWait}"></property>
+		<!-- 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位是毫秒 -->
+		<property name="timeBetweenEvictionRunsMillis" value="${druid.timeBetweenEvictionRunsMillis}"></property>
+		<!-- 配置一个连接在池中最小生存的时间，单位是毫秒 -->
+		<property name="minEvictableIdleTimeMillis" value="${druid.minEvictableIdleTimeMillis}"></property>
+		<!-- 打开PSCache，并且指定每个连接上PSCache的大小 -->
+		<property name="poolPreparedStatements" value="${druid.poolPreparedStatements}"></property><!-- 
+			如果使用mysql，则建议设置为fasle -->
+		<property name="maxOpenPreparedStatements" value="${druid.maxOpenPreparedStatements}"></property>
+		<property name="testOnBorrow" value="${druid.testOnBorrow}"></property>
+		<property name="testOnReturn" value="${druid.testOnReturn}"></property>
+		<property name="testWhileIdle" value="${druid.testWhileIdle}"></property>
+		<property name="validationQuery" value="${druid.validationQuery}"></property>
+		<!-- 配置监控统计拦截的filters -->
+		<property name="filters" value="${druid.filters}"></property>
+	</bean>
+	<!-- 需要给dataSource加上别名，因为queryAndEncodeDatabaseAuthenticationHandler注入Datasource时，依赖的是queryEncodeDatabaseDataSource 
+	<alias name="dataSource" alias="queryEncodeDatabaseDataSource" />-->
+</beans>

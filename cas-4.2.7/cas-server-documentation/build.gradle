@@ -1,0 +1,7 @@
+description = "Apereo CAS Documentation"
+
+javadoc {
+    enabled false
+}
+[ZoneTransfer]
+ZoneId=3
